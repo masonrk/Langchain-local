@@ -3,11 +3,11 @@ Download [Node.js](https://nodejs.org/en/download/).
 
 Download Ollama (https://ollama.com/)
 complete the set up.
-open a terminal and run (ollama pull llama2)
-
-go into your project and run
 
 ``` bash
+#pull ollama2
+ollama pull llama2
+
 # Install dependencies
 npm install
 
