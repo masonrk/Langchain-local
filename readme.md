@@ -7,6 +7,7 @@ open a terminal and run (ollama pull llama2)
 
 go into your project and run
 
+``` bash
 # Install dependencies
 npm install
 
@@ -16,3 +17,4 @@ npm build-vectorstore
 # Run to start communicating with the LLM
 # you must wait until the process is finished with the build-vectorstore
 npm start
+```
