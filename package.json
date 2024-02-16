@@ -4,7 +4,6 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build-vectorstore": "node src/vectorstore.js",
     "start": "node src/app.js"
   },
