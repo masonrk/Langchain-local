@@ -1,0 +1,7 @@
+/.env
+/src/documents/*.pdf
+/vector_storage/*.json
+/vector_storage/*.index
+node_modules
+.DS_Store?
+*.DS_Store
