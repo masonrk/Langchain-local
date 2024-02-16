@@ -6,7 +6,7 @@ import { FaissStore } from "@langchain/community/vectorstores/faiss";
 import 'dotenv/config'
 
 const directoryLoader = new DirectoryLoader(
-    "/Users/mason.kelly/Desktop/LangchainProject/src/documents/",
+    process.env.DIRECTORY_LOADER,
     {
       ".pdf": (path) => new PDFLoader(path),
     }
