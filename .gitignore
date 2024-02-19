@@ -1,5 +1,4 @@
 /.env
-/src/documents/*.pdf
 /vector_storage/*.json
 /vector_storage/*.index
 node_modules
