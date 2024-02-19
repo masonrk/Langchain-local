@@ -3,8 +3,6 @@ const { OllamaEmbeddings } = require("@langchain/community/embeddings/ollama");
 const { DirectoryLoader } = require("langchain/document_loaders/fs/directory");
 const { PDFLoader } = require("langchain/document_loaders/fs/pdf");
 const { FaissStore } = require("@langchain/community/vectorstores/faiss");
-require('dotenv/config');
-
 
 async function processData() {
     const directoryLoader = new DirectoryLoader(

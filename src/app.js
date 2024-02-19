@@ -7,8 +7,6 @@ const { createHistoryAwareRetriever } = require("langchain/chains/history_aware_
 const { MessagesPlaceholder } = require("@langchain/core/prompts");
 const { HumanMessage, AIMessage } = require("@langchain/core/messages");
 const { FaissStore } = require("@langchain/community/vectorstores/faiss");
-const readline = require('readline');
-require('dotenv/config');
 
 const express = require('express');
 const app = express();
@@ -26,7 +24,7 @@ let chatHistoryArray = [];
 const setup = async () => {
 
     const embeddings = new OllamaEmbeddings({
-        model: "llama2",
+        model: "mistral",
         maxConcurrency: 5,
     });
 
