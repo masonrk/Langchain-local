@@ -1,46 +1,54 @@
-import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
-import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
-import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
-import { PDFLoader } from "langchain/document_loaders/fs/pdf";
-import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import 'dotenv/config'
-
-const directoryLoader = new DirectoryLoader(
-    process.env.DIRECTORY_LOADER,
-    {
-      ".pdf": (path) => new PDFLoader(path),
-    }
-);
-
-const docs = await directoryLoader.load();
-console.log({ docs });
-
-const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 1000,
-    chunkOverlap: 200,
-});
-const splitDocs = await splitter.splitDocuments(docs);
-
-console.log(splitDocs);
+const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
+const { OllamaEmbeddings } = require("@langchain/community/embeddings/ollama");
+const { DirectoryLoader } = require("langchain/document_loaders/fs/directory");
+const { PDFLoader } = require("langchain/document_loaders/fs/pdf");
+const { FaissStore } = require("@langchain/community/vectorstores/faiss");
+require('dotenv/config');
 
 
-const embeddings = new OllamaEmbeddings({
-    model: "llama2",
-    maxConcurrency: 5,
-});
+async function processData() {
+    const directoryLoader = new DirectoryLoader(
+        './src/documents/',
+        {
+            ".pdf": (path) => new PDFLoader(path),
+        }
+    );
 
-console.log('please wait');
-console.log('Docs are being saved into the Vector Store');
+    const docs = await directoryLoader.load();
+    console.log({ docs });
 
-const vectorstore = await FaissStore.fromDocuments(
-    splitDocs,
-    embeddings
-);
+    const splitter = new RecursiveCharacterTextSplitter({
+        chunkSize: 1000,
+        chunkOverlap: 200,
+    });
+    const splitDocs = await splitter.splitDocuments(docs);
 
-// Save the vector store to a directory
-const directory = process.env.VECTOR_STORE_LOCATION;
+    console.log(splitDocs);
 
-await vectorstore.save(directory);
+    const embeddings = new OllamaEmbeddings({
+        model: "llama2",
+        maxConcurrency: 5,
+    });
 
-console.log('Docs are finished saving to '+ directory);
+    console.log('Please wait');
+    console.log('Docs are being saved into the Vector Store');
+
+    const vectorstore = await FaissStore.fromDocuments(
+        splitDocs,
+        embeddings
+    );
+
+    // Save the vector store to a directory
+    const directory = './vector_storage/';
+
+    await vectorstore.save(directory);
+
+    console.log('Docs are finished saving to ' + directory);
+}
+
+processData()
+    .catch(error => {
+        console.error('Error processing data:', error);
+    });
+
 

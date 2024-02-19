@@ -4,7 +4,7 @@ Download [Node.js](https://nodejs.org/en/download/).
 Download Ollama (https://ollama.com/)
 complete the set up.
 
-copy the .env.example and change the 2 paths to your 2 local paths where you have your pdfs and where you you want the vectorstore to be saved.
+front end at http://localhost:4000
 
 ``` bash
 #pull ollama2

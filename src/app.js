@@ -1,60 +1,78 @@
-import { createRetrievalChain } from "langchain/chains/retrieval";
-import { ChatOllama } from "@langchain/community/chat_models/ollama";
-import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
-import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { createHistoryAwareRetriever } from "langchain/chains/history_aware_retriever";
-import { MessagesPlaceholder } from "@langchain/core/prompts";
-import { HumanMessage, AIMessage } from "@langchain/core/messages";
-import { FaissStore } from "@langchain/community/vectorstores/faiss";
-import readline from 'readline';
-import 'dotenv/config'
+const { createRetrievalChain } = require("langchain/chains/retrieval");
+const { ChatOllama } = require("@langchain/community/chat_models/ollama");
+const { createStuffDocumentsChain } = require("langchain/chains/combine_documents");
+const { OllamaEmbeddings } = require("@langchain/community/embeddings/ollama");
+const { ChatPromptTemplate } = require("@langchain/core/prompts");
+const { createHistoryAwareRetriever } = require("langchain/chains/history_aware_retriever");
+const { MessagesPlaceholder } = require("@langchain/core/prompts");
+const { HumanMessage, AIMessage } = require("@langchain/core/messages");
+const { FaissStore } = require("@langchain/community/vectorstores/faiss");
+const readline = require('readline');
+require('dotenv/config');
+
+const express = require('express');
+const app = express();
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server);
 
 
 //End imports ******************************
+let vectorstore; // Declare global variable for vectorstore
+let chatModel; // Declare global variable for chatModel
 let chatHistoryArray = [];
 
-const embeddings = new OllamaEmbeddings({
-    model: "llama2",
-    maxConcurrency: 5,
-});
+const setup = async () => {
 
-const vectorstore = await FaissStore.load(
-    process.env.VECTOR_STORE_LOCATION,
-    embeddings
-  );
-
-const chatModel = new ChatOllama({
-    baseUrl: "http://localhost:11434",
-    model: "llama2",
-});
-
-
-//start in user input ******************************
-
-const readInput = () => {
-    const cons = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
+    const embeddings = new OllamaEmbeddings({
+        model: "llama2",
+        maxConcurrency: 5,
     });
 
-    return new Promise(resolve => {
-        cons.question("\n  << What would you like to know: ", answer => {
-            cons.close();
-            resolve(answer);
-        });
+    vectorstore = await FaissStore.load(
+        './vector_storage/',
+        embeddings
+    );
+
+    chatModel = new ChatOllama({
+        baseUrl: "http://localhost:11434",
+        model: "llama2",
     });
-};
+}
+setup();
 
-const callback = async () => {
-    const data = await readInput();
-    console.log('\n>> ' + await prompts(data));
-    await callback();
-};
 
-callback();
 
-//end in user input ******************************
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/index.html');
+});
+
+const connectedClients = {};
+
+io.on('connection', (socket) => {
+    console.log('a user connected');
+    
+    connectedClients[socket.id] = socket;
+
+    socket.on('chat message', async (msg) => {
+        try {
+            const recievedAnswer = await prompts(msg);
+            socket.emit('chat message', recievedAnswer);
+        } catch (error) {
+            console.error('Error processing message:', error);
+        }
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('user disconnected');
+        delete connectedClients[socket.id];
+    });
+});
+
+server.listen(4000, () => {
+  console.log('listening on *:4000');
+});
 
 function prompts(input){
     const prompt =
@@ -70,22 +88,21 @@ function prompts(input){
 }
 
 async function myfunc(prompt, input){
-
     const documentChain = await createStuffDocumentsChain({
         llm: chatModel,
         prompt,
     });
 
     const retriever = vectorstore.asRetriever();
-
+    console.log(chatHistoryArray)
     const historyAwarePrompt = ChatPromptTemplate.fromMessages([
         new MessagesPlaceholder("chat_history"),
         ["user", "{input}"],
         [
           "user",
-          "Given the above conversation, generate a natural language search input to look up in order to get information relevant to the conversation. Do not respond with anything except the input.",
+          "Given the above conversation, generate a search query to look up in order to get information relevant to the conversation",
         ],
-      ]);
+    ]);
     
     const historyAwareRetrieverChain = await createHistoryAwareRetriever({
         llm: chatModel,
@@ -98,13 +115,12 @@ async function myfunc(prompt, input){
     retriever: historyAwareRetrieverChain,
     });
 
-
     const result = await retrievalChain.invoke({
         chat_history: chatHistoryArray,
         input,
     });
 
     chatHistoryArray.push(new HumanMessage(input),new AIMessage(result.answer));
-
     return result.answer;
 }
+

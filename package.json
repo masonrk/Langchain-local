@@ -2,17 +2,18 @@
   "name": "langchain-poject",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
   "scripts": {
     "build-vectorstore": "node src/vectorstore.js",
     "start": "node src/app.js"
   },
   "dependencies": {
     "dotenv": "^16.4.4",
+    "express": "^4.18.2",
     "faiss-node": "^0.5.1",
     "langchain": "^0.1.17",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^4.0.379",
-    "pickleparser": "^0.2.1"
+    "pickleparser": "^0.2.1",
+    "socket.io": "^4.7.4"
   }
 }
