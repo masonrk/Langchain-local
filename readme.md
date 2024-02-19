@@ -6,6 +6,8 @@ complete the set up.
 
 front end at http://localhost:4000
 
+run the example pdf or add your own pdfs to the documents folder.
+
 ``` bash
 #pull ollama2
 ollama pull llama2
