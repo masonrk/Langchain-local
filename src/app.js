@@ -7,6 +7,9 @@ const { createHistoryAwareRetriever } = require("langchain/chains/history_aware_
 const { MessagesPlaceholder } = require("@langchain/core/prompts");
 const { HumanMessage, AIMessage } = require("@langchain/core/messages");
 const { FaissStore } = require("@langchain/community/vectorstores/faiss");
+const { Pinecone } = require("@pinecone-database/pinecone");
+const { PineconeStore } = require("@langchain/pinecone");
+require('dotenv').config()
 
 const express = require('express');
 const app = express();
@@ -14,6 +17,10 @@ const http = require('http');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
+
+const usePinecone = true;
+const pinecone = new Pinecone();
+const pineconeIndex = pinecone.Index('vector-store');
 
 
 //End imports ******************************
@@ -28,11 +35,19 @@ const setup = async () => {
         maxConcurrency: 5,
     });
 
-    vectorstore = await FaissStore.load(
-        './vector_storage/',
-        embeddings
-    );
-
+    if(usePinecone){
+        console.log('in pinecone');
+        vectorstore = await PineconeStore.fromExistingIndex(
+            embeddings,
+            { pineconeIndex }
+        );
+    }
+    else{
+        vectorstore = await FaissStore.load(
+            './vector_storage/',
+            embeddings
+        );
+    }
     chatModel = new ChatOllama({
         baseUrl: "http://localhost:11434",
         model: "llama2",
@@ -90,9 +105,8 @@ async function myfunc(prompt, input){
         llm: chatModel,
         prompt,
     });
-
     const retriever = vectorstore.asRetriever();
-    console.log(chatHistoryArray)
+
     const historyAwarePrompt = ChatPromptTemplate.fromMessages([
         new MessagesPlaceholder("chat_history"),
         ["user", "{input}"],
