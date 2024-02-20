@@ -10,7 +10,7 @@ async function processData() {
 
     const pinecone = new Pinecone();
 
-    const pineconeIndex = pinecone.Index('vector-store');
+    const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
 
     const directoryLoader = new DirectoryLoader(
         './src/documents/',

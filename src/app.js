@@ -20,7 +20,7 @@ const io = new Server(server);
 
 const usePinecone = true;
 const pinecone = new Pinecone();
-const pineconeIndex = pinecone.Index('vector-store');
+const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
 
 
 //End imports ******************************
