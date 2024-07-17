@@ -18,31 +18,28 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
-const usePinecone = true;
-const pinecone = new Pinecone();
-const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
+const usePinecone = false;
+//const pinecone = new Pinecone();
+//const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX);
 
-
-//End imports ******************************
+// End imports ******************************
 let vectorstore; // Declare global variable for vectorstore
 let chatModel; // Declare global variable for chatModel
-let chatHistoryArray = [];
+let chatHistory = {}; // Object to store chat history for each session
 
 const setup = async () => {
-
     const embeddings = new OllamaEmbeddings({
-        model: "mistral",
+        model: "llama3",
         maxConcurrency: 5,
     });
 
-    if(usePinecone){
-        console.log('in pinecone');
+    if (usePinecone) {
+        console.log('Using Pinecone');
         vectorstore = await PineconeStore.fromExistingIndex(
             embeddings,
             { pineconeIndex }
         );
-    }
-    else{
+    } else {
         vectorstore = await FaissStore.load(
             './vector_storage/',
             embeddings
@@ -55,52 +52,59 @@ const setup = async () => {
 }
 setup();
 
-
-
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+    res.sendFile(__dirname + '/index.html');
 });
 
 const connectedClients = {};
 
 io.on('connection', (socket) => {
     console.log('a user connected');
-    
+
     connectedClients[socket.id] = socket;
+    chatHistory[socket.id] = [];
 
     socket.on('chat message', async (msg) => {
         try {
-            const recievedAnswer = await prompts(msg);
-            socket.emit('chat message', recievedAnswer);
+            const receivedAnswer = await prompts(msg, socket.id);
+            socket.emit('chat message', receivedAnswer);
         } catch (error) {
             console.error('Error processing message:', error);
         }
     });
-    
+
     socket.on('disconnect', () => {
         console.log('user disconnected');
         delete connectedClients[socket.id];
+        delete chatHistory[socket.id];
     });
 });
 
 server.listen(4000, () => {
-  console.log('listening on *:4000');
+    console.log('listening on *:4000');
 });
 
-function prompts(input){
-    const prompt =
-    ChatPromptTemplate.fromTemplate(`Answer the following question based only on the provided context:
+function prompts(input, sessionId) {
+    const prompt = ChatPromptTemplate.fromTemplate(`
+        You are a large language model. You possess comprehensive knowledge across various domains including but not limited to science, technology, history, arts, and current events up until 2023. You are capable of understanding and generating human-like text based on the input provided to you.
+
+        You can assist with answering questions, providing explanations, creating content, offering recommendations, and engaging in meaningful conversations. Use your extensive knowledge and understanding to provide the best possible answer.
+
+        Answer the following question based on the provided context if it exists. If the context does not contain enough information to answer the question fully, answer to the best of your abilities based on your general knowledge.
 
         <context>
         {context}
         </context>
 
-        Question: ${input}`
+        Question: ${input}
+
+        Response:`
     );
-    return myfunc(prompt, input);
+    return myfunc(prompt, input, sessionId);
 }
 
-async function myfunc(prompt, input){
+
+async function myfunc(prompt, input, sessionId) {
     const documentChain = await createStuffDocumentsChain({
         llm: chatModel,
         prompt,
@@ -111,11 +115,11 @@ async function myfunc(prompt, input){
         new MessagesPlaceholder("chat_history"),
         ["user", "{input}"],
         [
-          "user",
-          "Given the above conversation, generate a search query to look up in order to get information relevant to the conversation",
+            "user",
+            "Given the above conversation, generate a search query to look up in order to get information relevant to the conversation",
         ],
     ]);
-    
+
     const historyAwareRetrieverChain = await createHistoryAwareRetriever({
         llm: chatModel,
         retriever,
@@ -123,16 +127,15 @@ async function myfunc(prompt, input){
     });
 
     const retrievalChain = await createRetrievalChain({
-    combineDocsChain: documentChain,
-    retriever: historyAwareRetrieverChain,
+        combineDocsChain: documentChain,
+        retriever: historyAwareRetrieverChain,
     });
 
     const result = await retrievalChain.invoke({
-        chat_history: chatHistoryArray,
+        chat_history: chatHistory[sessionId],
         input,
     });
 
-    chatHistoryArray.push(new HumanMessage(input),new AIMessage(result.answer));
+    chatHistory[sessionId].push(new HumanMessage(input), new AIMessage(result.answer));
     return result.answer;
 }
-
